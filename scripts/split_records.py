@@ -7,47 +7,28 @@ import argparse
 import sys
 from collections import OrderedDict
 
-AUTHOR_NAME = r"""
-(?!Герой\sСоветского\s+Союза)
-(?<last>           # Фамилия:
-([Дд]['’]|[Дд]е )?\p{Lu}\p{Ll}+      # Воронцов / д'Амичис
-(-\p{Lu}\p{Ll}+|   # Воронцов-Вельяминов
--(отец|старший)|   # Дюма-отец
-\s+\p{Lu}\p{Ll}+(?=,))?# Сервантес Сааведра, Мигель 
-)
-(\s+\((?<real>     # расшифровка псевдонима:
-\p{Lu}\p{Ll}+)\))? #  Петров (Бирюк)
-(  # альтернатива — без запятой:
-\s+(?<ini>                                        # инициалы или имена:
-\p{Lu}\p{Ll}{0,2}\.[\s-]?\p{Lu}\p{Ll}{0,2}\.      # Дм. Ив.; Г.-Х.
-|\p{Lu}\p{Ll}{0,2}\.                              # А.
-|\p{Lu}\p{Ll}+\s+\p{Lu}\p{Ll}{3,}(?=(\.|,\s+\p{Lu}\p{Ll}+|\s+и\s+др\.|\s+и\s+\p{Lu}\p{Ll}+|,?\s+\[|\s+\((\p{Lu}\p{Ll}{0,2}\.\s+)+\p{Lu}\p{Ll}+)) # Иван Ильич
-|\p{Lu}\p{Ll}+-(Булат|бао|ф[эе]й|и|мин|Фу|хуа|цзин?|линь|юй|нань|чжень|ян|заде)  # Хас-Булат, Юй-бао и тп.
-|\p{Lu}\p{Ll}+\s+\p{Lu}\p{Ll}{0,2}\.              # Фенимор Д.
-|\p{Lu}\p{Ll}{1,}(-\p{Lu}\p{Ll}+)?(\s+де)?(?=(\.|,\s+\p{Lu}\p{Ll}+|\s+и\s+др\.|\s+и\s+\p{Lu}\p{Ll}+|,?\s+\[|\s+\((\p{Lu}\p{Ll}{0,2}\.\s+)+\p{Lu}\p{Ll}+))) # Василий; Иоганн-Вольфганг; Шарль де
-|  # альтернатива — после запятой:
-,\s+(?<ini>братья|\p{Lu}\p{Ll}+)(?=\.)                          # Гримм, братья
-)(\s+
-\((?<real> # расшифровка псевдонима:
-(проф\.\s+)?(\p{Lu}\p{Ll}{0,2}\.\s+){0,2}\p{Lu}\p{Ll}+)\) # (проф. П. П. Петров)
-(?=\.)
-|,\s+                                       # титулы:
-((?<real>Герой\s+Советского\s+Союза(?=\.)|   # Чкалов, Герой Советского Союза
-проф\.|[Дд]-р.|инж\.|акад\.|доцент|сост\.),?                            # , проф.; Д-р.
-|\[(?<real>[^]]+)\]                     # [явная маркировка] 
-))?
-"""
-INI_AUTHOR = r"""
-(?<ini>\p{Lu}\p{Ll}{0,2}\.([\s-]?\p{Lu}\p{Ll}{0,2}\.)?)\s+
-(?<last>\p{Lu}\p{Ll}+(-\p{Lu}\p{Ll}+)?)
-"""
-SINGLE_AUTHORS = r'Джамбул|Майн-Рид|Мольер|Эсхил|Айбек|Обос-Апер|Уйда|Кукрыниксы|Конан-Дойль|Шолом-Алейхем|Эль-Регистан|д’Эрвильи|Лесник|Гайрати|Мирмухсин|Алтан-Хайша|Луда|Аригапуди|Стендаль|Эзоп|Физули|Элляй|Гомер|Сайяр|Плутарх|Фирдоуси|Сан-Марку|Фуиг-Куан|Сат-Окх|Мультатули|Елин-Пелин|Анко'
 
-AUTHOR_KEY = r""" (?<key>((\p{Lu}\.\s*){2,4}|\p{Lu}+[*]{0,5}\p{Lu}?)\s+[(]\p{Lu}+[^)]+[)]| # В. Л. Т. (РАСШИФРОВКА)
-\p{Lu}+’?(\p{Lu}+|\s+|-){0,9}\s*(\[!\]\s*)?([\p{Lu}\p{Ll},.\s]+)?(([(]\p{Lu}+[^)]+[)]\s*){0,2}|(\[\p{Lu}+[^]]*\])?)| # АВТОР (с опечатками и возм. расшифровкой)
-\s*Имя\s+авт(\.|ора)\s+не\+установлено| # Имя авт. не установлено
-) # M***
+AUTHOR_KEY = r"""
+(?<key>
+(\p{Lu}\.\s*){2,4}\s+[(]\p{Lu}+[^)]+[)]                  # В. Л. Т. (РАСШИФРОВКА)
+|
+  \p{Lu}+(’?(\p{Lu}+|\s+|-){0,9}|[*]{0,5}\p{Lu}{0,3}|\.\.\.\p{Lu}{0,3})\s* # ФАМИЛИЯ или ПСЕВДОНИМ M*** БАЗ...В
+  (\[!\]\s*)?                                              # [!] иногда
+  ([\p{Lu}\p{Ll},.\s]+)?                                    # имена или инициалы
+    ( # раскрытие автора в круглых или квадратных скобках
+      ([(]\p{Lu}+[^)]+[)]\s*){0,2}| # (НАСТ имя)
+      (\[\p{Lu}+[^]]*\])? # [АВТОР ...]
+    )
+|
+Имя\s+авт(\.|ора)\s+не\s+установлено| # Имя авт. не установлено
+) # 
 ([,.]|\s*$) 
+"""
+
+TITLE_AUX = r"""
+(В\s+кн.:?\s+(?<in>.+)|
+Изд.\s+также\s+под\s+загл.\p{Ll}*:?\s+(?<alt_title>.+)|
+На\s+тит.\s+л.\s+загл.:?\s+(?<alt_title>.+))
 """
 
 # \p{Lu}(\p{Lu}+- |\p{Lu}+ |\P{Lu}\.\s*|\p{Lu}+)+\p{Lu}\s*,
@@ -246,115 +227,27 @@ attribute and start and end line numbers)
         yield rec
 
 
-def format_multi_authors(authors):
-    out = []
-    if not authors.endswith('.'):
-        authors = authors + '.'
-    for author in re.finditer(AUTHOR_NAME, authors, re.U | re.VERBOSE):
-        if author.group('real'):
-            out.append("{last}, {ini} [{real}]".format(**author.groupdict()))
-        else:
-            out.append("{last}, {ini}".format(**author.groupdict()))
-    return "; ".join(out)
+def parse_author(rec, match_obj):
+    pass
 
 
-def format_other_authors(others):
-    others = others.strip(' ;.,')
-    out = []
-    ini_author = re.compile(INI_AUTHOR, re.U | re.VERBOSE)
-    for author in re.split(r'[,;]\s+', others):
-        try:
-            m = ini_author.match(author)
-            out.append("{last}, {ini}".format(**m.groupdict()))
-        except AttributeError:
-            raise ValueError("Unrecognized author in the others list: %s" % author)
-    return "; ".join(out)
-    
-
-def extract_author(rec, prev=None, verbose=False):
-    """Process numbered lines, extract author name as a separate column,
-or indicate that it is missing with the NOAUTHOR tag. Inconsistencies
-are marked with ERRAUTHOR tag.
-    """
-    one_author = re.compile(AUTHOR_NAME + r"([[\W\s]--[,«]]+|\s+@[[\W\s]--[«]]+)(?<tail>.*)$", re.U | re.VERBOSE | re.V1)
-    dash = re.compile(r"^[\W\s]*[—][\W\s]*(?<tail>.*)$", re.U)
-    multi_author = re.compile(r'(?<all>' + AUTHOR_NAME +
-                              r'((\s+и\s+|,\s+)' + AUTHOR_NAME + r')+' +
-                              r')[\W\s]+(?<tail>.*)$', re.U | re.VERBOSE)
-    single_name_authors = re.compile(r"(?<last>" + SINGLE_AUTHORS +
-                                     r")[\W\s]+(?<tail>.*)$", re.U)
-    and_others = re.compile(AUTHOR_NAME +
-                            r"\s+и\s+др\.\s+(?<tail>(?<head>[^/]+)" +
-                            r"(/\s*(?<others>(" + INI_AUTHOR + r"[,;.]\s+)+))?.*)$",
-                            re.U | re.VERBOSE)
-    noauthor_tag = re.compile(r"^\s*@NOAUTHOR@[[\W\s]--[«]]+(?<tail>.*)$", re.V1)
-    author_tag = re.compile(r"^\s*@AUTHOR:(?<all>[^@]+)@[[\W\s]--[«]]+(?<tail>.*)$", re.V1)
-    hasone = one_author.match(rec.tail)
-    hasdash = dash.match(rec.tail)
-    hasmulti = multi_author.match(rec.tail)
-    hassingle = single_name_authors.match(rec.tail)
-    hasothers = and_others.match(rec.tail)
-    hasnoauthor = noauthor_tag.match(rec.tail)
-    hastag = author_tag.match(rec.tail)
-    if hasmulti:
-        if verbose:
-            print("hasmulti:", hasmulti.groupdict())
-        rec['author'] = format_multi_authors(hasmulti.group('all'))
-        rec.tail = hasmulti.group('tail')
-    elif hasothers:
-        if verbose:
-            print("hasothers:", hasothers.groupdict())     
-        rec['author'] = "{last}, {ini}; OTHERS".format(**hasothers.groupdict())
-        rec.tail = hasothers.group('tail')
-        if hasothers.group('others'):
-            others = format_other_authors(hasothers.group('others'))
-            if others:
-                rec['author'] = others
-    elif hasone:
-        if verbose:
-            print("hasone:", hasone.groupdict())
-        rec['author'] = "{last}, {ini}".format(**hasone.groupdict())
-        if hasone.group('real'):
-            rec['author'] = "{0} [{1}]".format(rec['author'], hasone.group('real'))
-        rec.tail = hasone.group('tail')
-    elif hasdash:
-        if prev is None:
-            rec['author'] = "ERRAUTHOR"
-        elif prev == "NOAUTHOR":
-            rec['author'] = "ERRAUTHOR"
-        else:
-            rec['author'] = prev
-        rec.tail = hasdash.group('tail')
-    elif hassingle:
-        rec['author'] = hassingle.group('last')
-        rec.tail = hassingle.group('tail')
-    elif hasnoauthor:
-        rec['author'] = "NOAUTHOR"
-        rec.tail = hasnoauthor.group('tail')
-    elif hastag:
-        rec['author'] = hastag.group('all')
-        rec.tail = hastag.group('tail')
-    else:
-        rec['author'] = "NOAUTHOR"
-    return rec
+def parse_title(rec):
+    if rec['title'] == 'NOPARSE':
+        return rec
 
 
-def extract_title(rec, verbose=False):
-    author_key = re.compile(r"^(?<title>.*[.?!\]»])\s+(?<tail>" + AUTHOR_KEY +
-                            r".*)$", re.U | re.VERBOSE | re.V1)
+def extract_title_author(rec, verbose=False):
+    author_key = re.compile(r"^(?<title>.*[.?!\]»])\s+(?<author>" + AUTHOR_KEY +
+                            r")(?<tail>.*)$", re.U | re.VERBOSE | re.V1)
     has_author_key = author_key.match(rec.tail)
     if has_author_key:
         rec['title'] = has_author_key.group('title')
+        rec['author'] = has_author_key.group('author')
         rec.tail = has_author_key.group('tail')
     else:
         rec['title'] = 'NOPARSE'
+        rec['author'] = ''
     return rec
-
-
-# def extract_title(row):
-#     head = row[:-1]
-#     tail = row[-1]
-#     re.compile(r'')
     
     
 def parse_arguments():
@@ -379,7 +272,7 @@ def main():
     # author = None               
     lines = extract_section_to_process(args.infile)
     for rec in iter_records(numbered_lines(lines)):
-        row = extract_title(rec, verbose=args.verbose)
+        row = extract_title_author(rec, verbose=args.verbose)
         csv_writer.writerow(row.serialize())
         # row = extract_author(rec, author, verbose=args.verbose)
         # author = row['author']
