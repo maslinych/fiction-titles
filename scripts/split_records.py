@@ -43,6 +43,14 @@ INI_AUTHOR = r"""
 """
 SINGLE_AUTHORS = r'Джамбул|Майн-Рид|Мольер|Эсхил|Айбек|Обос-Апер|Уйда|Кукрыниксы|Конан-Дойль|Шолом-Алейхем|Эль-Регистан|д’Эрвильи|Лесник|Гайрати|Мирмухсин|Алтан-Хайша|Луда|Аригапуди|Стендаль|Эзоп|Физули|Элляй|Гомер|Сайяр|Плутарх|Фирдоуси|Сан-Марку|Фуиг-Куан|Сат-Окх|Мультатули|Елин-Пелин|Анко'
 
+AUTHOR_KEY = r""" (?<key>((\p{Lu}\.\s*){2,4}|\p{Lu}+[*]{0,5}\p{Lu}?)\s+[(]\p{Lu}+[^)]+[)]| # В. Л. Т. (РАСШИФРОВКА)
+\p{Lu}+’?(\p{Lu}+|\s+|-){0,9}\s*(\[!\]\s*)?([\p{Lu}\p{Ll},.\s]+)?(([(]\p{Lu}+[^)]+[)]\s*){0,2}|(\[\p{Lu}+[^]]*\])?)| # АВТОР (с опечатками и возм. расшифровкой)
+\s*Имя\s+авт(\.|ора)\s+не\+установлено| # Имя авт. не установлено
+) # M***
+([,.]|\s*$) 
+"""
+
+# \p{Lu}(\p{Lu}+- |\p{Lu}+ |\P{Lu}\.\s*|\p{Lu}+)+\p{Lu}\s*,
 
 class BibItem(object):
     """A class to hold a sequential bibliographic number.  In contrast to
@@ -331,6 +339,18 @@ are marked with ERRAUTHOR tag.
     return rec
 
 
+def extract_title(rec, verbose=False):
+    author_key = re.compile(r"^(?<title>.*[.?!\]»])\s+(?<tail>" + AUTHOR_KEY +
+                            r".*)$", re.U | re.VERBOSE | re.V1)
+    has_author_key = author_key.match(rec.tail)
+    if has_author_key:
+        rec['title'] = has_author_key.group('title')
+        rec.tail = has_author_key.group('tail')
+    else:
+        rec['title'] = 'NOPARSE'
+    return rec
+
+
 # def extract_title(row):
 #     head = row[:-1]
 #     tail = row[-1]
@@ -356,10 +376,11 @@ def main():
     """main processing"""
     args = parse_arguments()
     csv_writer = csv.writer(args.outfile)
-    author = None
+    # author = None               
     lines = extract_section_to_process(args.infile)
     for rec in iter_records(numbered_lines(lines)):
-        csv_writer.writerow(rec.serialize())
+        row = extract_title(rec, verbose=args.verbose)
+        csv_writer.writerow(row.serialize())
         # row = extract_author(rec, author, verbose=args.verbose)
         # author = row['author']
         # csv_writer.writerow(row.serialize())
