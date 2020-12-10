@@ -216,9 +216,10 @@ attribute and start and end line numbers)
                 itemno += 1
                 startline = lineno
                 while num > itemno:
-                    rec = Record(tail = 'MISSING', start = startline, end = lineno - 1)
-                    rec['num'] = itemno
-                    yield rec
+                    if num.num > itemno:
+                        rec = Record(tail = 'MISSING', start = startline, end = lineno - 1)
+                        rec['num'] = itemno
+                        yield rec
                     itemno += 1
             itemno = num
             stack.append(txt)
