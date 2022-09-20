@@ -9,26 +9,28 @@ from collections import OrderedDict
 
 
 AUTHOR_KEY = r"""
-(?<key>
-(\p{Lu}\.\s*){2,4}\s+[(]\p{Lu}+[^)]+[)]                  # В. Л. Т. (РАСШИФРОВКА)
+((?<key>
+(\p{Lu}[.]\s*|и\s+){2,4}\s+[(]\p{Lu}+[^)]+[)]                  # В. Л. Т. (РАСШИФРОВКА)
 |
-  \p{Lu}+(’?(\p{Lu}+|\s+|-){0,9}|[*]{0,5}\p{Lu}{0,3}|\.\.\.\p{Lu}{0,3})\s* # ФАМИЛИЯ или ПСЕВДОНИМ M*** БАЗ...В
+  \p{Lu}+(’?(\p{Lu}+|\s+\p{Lu}+|-){1,9}|[*]{1,5}\p{Lu}{0,3}|[.][.][.]\p{Lu}{0,3})\s* # ФАМИЛИЯ или ПСЕВДОНИМ M*** БАЗ...В
   (\[!\]\s*)?                                              # [!] иногда
-  ([\p{Lu}\p{Ll},.\s]+)?                                    # имена или инициалы
+  (,(\s+\p{Lu}\p{Ll}{0,2}[.]|\s+\p{Lu}\p{Ll}+-\p{Lu}\p{Ll}+|\s+\p{Lu}[\p{Ll}-]+|\s+д[еиа’']|\s+фон|\s+и|\s+оглы|\s+[(](отец|сын)[)]){1,4}\s*)?  # имена или инициалы
+  (\[!\]\s*)?                                              # [!] иногда
     ( # раскрытие автора в круглых или квадратных скобках
       ([(]\p{Lu}+[^)]+[)]\s*){0,2}| # (НАСТ имя)
       (\[\p{Lu}+[^]]*\])? # [АВТОР ...]
     )
 |
-Имя\s+авт(\.|ора)\s+не\s+установлено| # Имя авт. не установлено
+Имя\s+авт([.]|ора)\s+не\s+установлено # Имя авт. не установлено
 ) # 
-([,.]|\s*$) 
+[.]?\s*)
 """
 
 TITLE_AUX = r"""
-(В\s+кн.:?\s+(?<in>.+)|
-Изд.\s+также\s+под\s+загл.\p{Ll}*:?\s+(?<alt_title>.+)|
-На\s+тит.\s+л.\s+загл.:?\s+(?<alt_title>.+))
+(В\s+кн[.]:?\s+(?<in>.+)|
+Изд.\s+также\s+под\s+загл.\p{Ll}*[:;]?\s+(?<alt_title>.+)|
+На\s+тит.\s+л.\s+загл[.]:?\s+(?<alt_title>.+)|
+Загл[.]\s+обл[.]:?\s+(?<alt_title>.+))
 """
 
 # \p{Lu}(\p{Lu}+- |\p{Lu}+ |\P{Lu}\.\s*|\p{Lu}+)+\p{Lu}\s*,
@@ -237,12 +239,14 @@ def parse_title(rec):
 
 
 def extract_title_author(rec, verbose=False):
-    author_key = re.compile(r"^(?<title>.*[.?!\]»])\s+(?<author>" + AUTHOR_KEY +
-                            r")(?<tail>.*)$", re.U | re.VERBOSE | re.V1)
+    author_key = re.compile(r"^(?<title>.*[.?!\]»])\s+(?<author>" + AUTHOR_KEY + '(,\s+' + AUTHOR_KEY + ')?)' +
+                            '(@?' + TITLE_AUX + ')?' + "(?<tail>.*?)$", re.U | re.VERBOSE | re.V1)
     has_author_key = author_key.match(rec.tail)
     if has_author_key:
         rec['title'] = has_author_key.group('title')
         rec['author'] = has_author_key.group('author')
+        rec['alt_title'] = has_author_key.group('alt_title') or ''
+        rec['in'] = has_author_key.group('in') or ''
         rec.tail = has_author_key.group('tail')
     else:
         rec['title'] = 'NOPARSE'
