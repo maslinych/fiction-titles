@@ -12,7 +12,7 @@ AUTHOR_KEY = r"""
 ((?<key>
 (\p{Lu}[.]\s*|и\s+){2,4}\s+[(]\p{Lu}+[^)]+[)]                  # В. Л. Т. (РАСШИФРОВКА)
 |
-  \p{Lu}+(’?(\p{Lu}+|\s+\p{Lu}+|-){1,9}|[*]{1,5}\p{Lu}{0,3}|[.][.][.]\p{Lu}{0,3})\s* # ФАМИЛИЯ или ПСЕВДОНИМ M*** БАЗ...В
+  \p{Lu}+(’?(\p{Lu}+|\s+\p{Lu}+|-){1,9}|[*]{1,5}\p{Lu}{0,3}|[.][.][.]+\s*\p{Lu}{0,3})\s* # ФАМИЛИЯ или ПСЕВДОНИМ M*** БАЗ...В
   (\[!\]\s*)?                                              # [!] иногда
   (,(\s+\p{Lu}\p{Ll}{0,2}[.]|\s+\p{Lu}\p{Ll}+-\p{Lu}\p{Ll}+|\s+\p{Lu}[\p{Ll}-]+|\s+д[еиа’']|\s+фон|\s+и|\s+оглы|\s+[(](отец|сын)[)]){1,4}\s*)?  # имена или инициалы
   (\[!\]\s*)?                                              # [!] иногда
@@ -242,18 +242,25 @@ def extract_title_author(rec, verbose=False):
     author_key = re.compile(r"^(?<title>.*[.?!\]»])\s+(?<author>" + AUTHOR_KEY + '(,\s+' + AUTHOR_KEY + ')?)' +
                             '(@?' + TITLE_AUX + ')?' + "(?<tail>.*?)$", re.U | re.VERBOSE | re.V1)
     has_author_key = author_key.match(rec.tail)
+    initials = re.compile(r'^(?<title>.+?)\s+(?<author>(\p{Lu}[.]\s*){1,5})', re.U)
+    has_initials = initials.match(rec.tail)
     if has_author_key:
         rec['title'] = has_author_key.group('title')
         rec['author'] = has_author_key.group('author')
         rec['alt_title'] = has_author_key.group('alt_title') or ''
         rec['in'] = has_author_key.group('in') or ''
         rec.tail = has_author_key.group('tail')
+    elif has_initials:
+        rec['title'] = has_initials.group('title')
+        rec['author'] = has_initials.group('author')
+        rec['alt_title'] = ''
+        rec.tail = ''
     else:
         rec['title'] = 'NOPARSE'
         rec['author'] = ''
     return rec
-    
-    
+
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Split scanned txt file into numbered records (CSV)', epilog=""" The idea is to rely on the sequentially numbered items. The script
 identifies all lines that look like a numbered item. All non-itemlike
