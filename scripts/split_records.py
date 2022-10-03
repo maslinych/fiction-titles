@@ -10,9 +10,9 @@ from collections import OrderedDict
 
 AUTHOR_KEY = r"""
 ((?<key>
-(\p{Lu}[.]\s*|и\s+){2,4}\s+[(]\p{Lu}+[^)]+[)]                  # В. Л. Т. (РАСШИФРОВКА)
+((\p{Lu}[.]\s*|и\s+){2,4}|-\p{Lu}{2,4})\s+[(]\p{Lu}+[^)]+[)]                  # В. Л. Т. (РАСШИФРОВКА)
 |
-  \p{Lu}+(’?(\p{Lu}+|\s+\p{Lu}+|-){1,9}|[*]{1,5}\p{Lu}{0,3}|[.][.][.]+\s*\p{Lu}{0,3})\s* # ФАМИЛИЯ или ПСЕВДОНИМ M*** БАЗ...В
+  \p{Lu}+([’']?(\p{Lu}+|\s+\p{Lu}+|-){1,9}|[*]{1,5}\p{Lu}{0,3}|[.][.][.]+\s*\p{Lu}{0,3}|—\p{Lu}{1,6})\s* # ФАМИЛИЯ или ПСЕВДОНИМ M*** БАЗ...В
   (\[!\]\s*)?                                              # [!] иногда
   (,(\s+\p{Lu}\p{Ll}{0,2}[.]|\s+\p{Lu}\p{Ll}+-\p{Lu}\p{Ll}+|\s+\p{Lu}[\p{Ll}-]+|\s+д[еиа’']|\s+фон|\s+и|\s+оглы|\s+[(](отец|сын)[)]){1,4}\s*)?  # имена или инициалы
   (\[!\]\s*)?                                              # [!] иногда
@@ -239,6 +239,13 @@ def parse_title(rec):
 
 
 def extract_title_author(rec, verbose=False):
+    if '#' in rec.tail:
+        has_diez = re.match(r'^(?<title>[^#]+?)\s*[#]\s*(?<author>.+)$', rec.tail, re.U)
+        rec['title'] = has_diez.group('title')
+        rec['author'] = has_diez.group('author')
+        rec['alt_title'] = ''
+        rec.tail = ''
+        return rec
     author_key = re.compile(r"^(?<title>.*[.?!\]»])\s+(?<author>" + AUTHOR_KEY + '(,\s+' + AUTHOR_KEY + ')?)' +
                             '(@?' + TITLE_AUX + ')?' + "(?<tail>.*?)$", re.U | re.VERBOSE | re.V1)
     has_author_key = author_key.match(rec.tail)
