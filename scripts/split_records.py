@@ -246,7 +246,7 @@ def extract_title_author(rec, verbose=False):
         rec['alt_title'] = ''
         rec.tail = ''
         return rec
-    author_key = re.compile(r"^(?<title>.*[.?!\]»])\s+(?<author>" + AUTHOR_KEY + '(,\s+' + AUTHOR_KEY + ')?)' +
+    author_key = re.compile(r"^(?<title>.*[.?!\]»])\s+(?<author>" + AUTHOR_KEY + r'(,\s+' + AUTHOR_KEY + ')?)' +
                             '(@?' + TITLE_AUX + ')?' + "(?<tail>.*?)$", re.U | re.VERBOSE | re.V1)
     has_author_key = author_key.match(rec.tail)
     initials = re.compile(r'^(?<title>.+?)\s+(?<author>(\p{Lu}[.]\s*){1,5})', re.U)
@@ -286,12 +286,13 @@ a sequence is encountered. When an expected next item is missing, a
 def main():
     """main processing"""
     args = parse_arguments()
-    csv_writer = csv.writer(args.outfile)
+    csv_writer = csv.DictWriter(args.outfile, fieldnames=['num', 'title', 'author', 'alt_title', 'in', 'tail'])
     # author = None               
     lines = extract_section_to_process(args.infile)
+    csv_writer.writeheader()
     for rec in iter_records(numbered_lines(lines)):
         row = extract_title_author(rec, verbose=args.verbose)
-        csv_writer.writerow(row.serialize())
+        csv_writer.writerow(row)
         # row = extract_author(rec, author, verbose=args.verbose)
         # author = row['author']
         # csv_writer.writerow(row.serialize())
