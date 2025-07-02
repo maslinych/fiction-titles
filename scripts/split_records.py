@@ -286,7 +286,7 @@ a sequence is encountered. When an expected next item is missing, a
 def main():
     """main processing"""
     args = parse_arguments()
-    csv_writer = csv.DictWriter(args.outfile, fieldnames=['num', 'title', 'author', 'alt_title', 'in', 'tail'])
+    csv_writer = csv.DictWriter(args.outfile, fieldnames=['start', 'end', 'num', 'title', 'author', 'alt_title', 'in', 'tail'])
     # author = None               
     lines = extract_section_to_process(args.infile)
     csv_writer.writeheader()
