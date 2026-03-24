@@ -117,12 +117,12 @@ class Record(OrderedDict):
         self.end = end
 
     def serialize(self):
-        out = []
-        out.append(self.start)
-        out.append(self.end)
+        out = {}
+        out['start'] = self.start
+        out['end'] = self.end
         for k, v in self.items():
-            out.append(str(v))
-        out.append(self.tail)
+            out[k] = str(v)
+        out['tail'] = self.tail
         return out
 
 
@@ -292,7 +292,9 @@ def main():
     csv_writer.writeheader()
     for rec in iter_records(numbered_lines(lines)):
         row = extract_title_author(rec, verbose=args.verbose)
-        csv_writer.writerow(row)
+        if row.start < 10:
+            print(row)
+        csv_writer.writerow(row.serialize())
         # row = extract_author(rec, author, verbose=args.verbose)
         # author = row['author']
         # csv_writer.writerow(row.serialize())
