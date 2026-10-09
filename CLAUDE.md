@@ -33,7 +33,7 @@ Only the tracked files (`git ls-files`) are part of the project; the many untrac
 4. `extract_title_author` — splits the record text into `title`, `author`, `alt_title`, `in`, `tail` using the `AUTHOR_KEY` regex (author surnames are in ALL CAPS in the source) and `TITLE_AUX` (`В кн.:`, `Изд. также под загл.`, `На тит. л. загл.`, `Загл. обл.`). Fallback: initials-only author. Otherwise `title = 'NOPARSE'`.
    - **Manual override:** if a record in the txt contains `#`, everything before it is the title and everything after is the author. Insert `#` into the txt to fix records the regex can't split.
 
-CSV columns: `start,end` (line numbers *relative to the start of the `titles` div*, not the file), `num`, `title`, `author`, `alt_title`, `in`, `tail` — see README.md for semantics.
+CSV columns: `start,end` (line numbers in `txt/vol_N.txt`), `num`, `title`, `author`, `alt_title`, `in`, `tail` — see README.md for semantics.
 
 ## Other files
 

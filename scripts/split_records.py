@@ -142,9 +142,10 @@ def extract_number(line):
 def extract_section_to_process(infile):
     """Extract section containing numbered items from a scanned text file. 
     The section should be delimited with the <div>-style markup.
+    Yields (lineno, line) tuples, lineno being the line number in the file.
     """
     inside = False
-    for line in infile:
+    for lineno, line in enumerate(infile, start=1):
         if re.match(r'\s*<div class="titles">', line):
             inside = True
             continue
@@ -152,18 +153,19 @@ def extract_section_to_process(infile):
             inside = False
             continue
         if inside:
-            yield line
+            yield (lineno, line)
 
 
 def numbered_lines(lines):
-    """Generator producing numbered lines as tuples"""
-    for lineno, line in enumerate(lines, start=1):
+    """Generator producing numbered lines as tuples
+    (lineno, number, text without number, full line)"""
+    for lineno, line in lines:
         line = line.strip()
         if line.startswith('#END'):
             break
         if line:
             num, tail = extract_number(line)
-            yield (lineno, num, tail)
+            yield (lineno, num, tail, line)
 
 
 def iter_records(numlines, k=101):
@@ -174,7 +176,7 @@ attribute and start and end line numbers)
     itemno = 0
     stack = []
     startline = 0
-    for lineno, n, txt in numlines:
+    for lineno, n, txt, line in numlines:
         if n == 0:
             num = 0
         else:
@@ -189,14 +191,14 @@ attribute and start and end line numbers)
                     rec.end = lineno - 1
                     yield rec
                     stack = []
-                    startline = lineno
+                startline = lineno
             else:
                 if num - itemno > k:
                     # gap in numbers is too large, unlikely to be the next
                     # number, treat as a regular textual line (with an
                     # accidental number in the beginning, like a year or
                     # a printrun figure)
-                    stack.append('{}. {}'.format(num, txt))
+                    stack.append(line)
                     continue
                 # we have a moderate gap in numbering, treat as next item
                 rec = Record(tail = ' '.join(stack))
@@ -220,7 +222,7 @@ attribute and start and end line numbers)
             stack.append(txt)
         elif num < itemno:
             # a lesser number, not a next item, treat as an item continuation
-            stack.append('{}. {}'.format(num, txt))
+            stack.append(line)
     else:
         # end of file: yield a final record
         rec = Record(tail = ' '.join(stack))
