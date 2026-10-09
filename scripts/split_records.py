@@ -35,6 +35,11 @@ TITLE_AUX = r"""
 Загл[.]\s+обл[.]:?\s+(?<alt_title>.+))
 """
 
+NOTE = r"""
+(?:^|(?<=[\s.,;)]))@?\s*
+(?<note>(Ошибочно\s+приписывал\p{Ll}*|Предполагаем\p{Ll}*\s+имя(\s+\p{Ll}+)?\s+авт(\.|ора))(?!\p{L}).*)$
+"""
+
 # \p{Lu}(\p{Lu}+- |\p{Lu}+ |\P{Lu}\.\s*|\p{Lu}+)+\p{Lu}\s*,
 
 class BibItem(object):
@@ -295,6 +300,24 @@ def extract_title_author(rec, verbose=False):
     return rec
 
 
+def split_note(rec):
+    """Move remarks on attribution («Ошибочно приписывалось…»,
+    «Предполагаемое имя авт.: …») from other fields to the note field"""
+    note = re.compile(NOTE, re.U | re.VERBOSE | re.V1)
+    m = note.search(rec.tail)
+    if m:
+        rec['note'] = m.group('note')
+        rec.tail = rec.tail[:m.start()].strip(' @')
+        return rec
+    for field in ('alt_title', 'in', 'author'):
+        m = note.search(rec.get(field, ''))
+        if m:
+            rec['note'] = m.group('note')
+            rec[field] = rec[field][:m.start()].strip(' @')
+            return rec
+    return rec
+
+
 def split_tail_aux(rec):
     """Move an alternative title or a «В кн.:» reference found in the tail
     to the alt_title or in field (if that field is still empty)"""
@@ -335,13 +358,14 @@ a sequence is encountered. When an expected next item is missing, a
 def main():
     """main processing"""
     args = parse_arguments()
-    csv_writer = csv.DictWriter(args.outfile, fieldnames=['start', 'end', 'num', 'title', 'author', 'alt_title', 'in', 'tail'],
+    csv_writer = csv.DictWriter(args.outfile, fieldnames=['start', 'end', 'num', 'title', 'author', 'alt_title', 'in', 'note', 'tail'],
                                 lineterminator='\n')
     # author = None               
     lines = extract_section_to_process(args.infile)
     csv_writer.writeheader()
     for rec in iter_records(numbered_lines(lines)):
-        row = normalize_values(split_tail_aux(extract_title_author(rec, verbose=args.verbose)))
+        row = extract_title_author(rec, verbose=args.verbose)
+        row = normalize_values(split_note(split_tail_aux(row)))
         csv_writer.writerow(row.serialize())
         # row = extract_author(rec, author, verbose=args.verbose)
         # author = row['author']

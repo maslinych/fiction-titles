@@ -33,7 +33,9 @@ Only the tracked files (`git ls-files`) are part of the project; the many untrac
 4. `extract_title_author` — splits the record text into `title`, `author`, `alt_title`, `in`, `tail` using the `AUTHOR_KEY` regex (author surnames are in ALL CAPS in the source) and `TITLE_AUX` (`В кн.:`, `Изд. также под загл.`, `На тит. л. загл.`, `Загл. обл.`). Fallback: initials-only author. Otherwise `title = 'NOPARSE'`.
    - **Manual override:** if a record in the txt contains `#`, everything before it is the title and everything after is the author (may be empty). An `@` after the author ends it; what follows is matched against `TITLE_AUX` (→ `in`/`alt_title`) or goes to `tail`. Without `@`, a trailing `TITLE_AUX` phrase is still split off. Insert `#` into the txt to fix records the regex can't split.
 
-CSV columns: `start,end` (line numbers in `txt/vol_N.txt`), `num`, `title`, `author`, `alt_title`, `in`, `tail` — see README.md for semantics.
+5. Post-processing in `main()`: `split_tail_aux` (an alt title / «В кн.:» phrase left in the tail → `alt_title`/`in`), `split_note` (remarks «Ошибочно приписывалось…», «Предполагаемое имя авт.…» → `note`), `normalize_values`; `Record.serialize` collapses whitespace in all fields.
+
+CSV columns: `start,end` (line numbers in `txt/vol_N.txt`), `num`, `title`, `author`, `alt_title`, `in`, `note`, `tail` — see README.md for semantics.
 
 ## Other files
 
