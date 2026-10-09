@@ -34,6 +34,12 @@ rule('imya-avt',
      )
 
 
+rule('izd',
+     'OCR Й for И in «Изд. также под загл.»: Йзд. → Изд.',
+     (r'\bЙзд\.', r'Изд.'),
+     )
+
+
 def titles_section(lines):
     """Yield indices of the lines inside the titles section"""
     inside = False

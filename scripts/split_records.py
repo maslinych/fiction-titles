@@ -14,7 +14,7 @@ AUTHOR_KEY = r"""
 |
   \p{Lu}+([’']?(\p{Lu}+|\s+\p{Lu}+|-|\s+\p{Lu}[.](?=\s*(\p{Lu}[.]|\p{Lu}{2}|[(]\p{Lu}))){1,9}|[*]{1,5}\p{Lu}{0,3}|[.][.][.]+\s*\p{Lu}{0,3}|—\p{Lu}{1,6})\s* # ФАМИЛИЯ или ПСЕВДОНИМ M*** БАЗ...В
   (\[!\]\s*)?                                              # [!] иногда
-  (,(\s+\p{Lu}\p{Ll}{0,2}[.]|\s+\p{Lu}\p{Ll}+-\p{Lu}\p{Ll}+|\s+\p{Lu}[\p{Ll}-]+|\s+д[’']|\s+(кызы|оглы|ибн|братья|графиня|граф|князь|княгиня|барон|баронесса|инфанта|г-жа|младший|старший|сотник|имп[.]|аф|делле|делла|дель|де|ди|да|дю|ла|ле|ван|фон|дер|и)(?!\p{L})|\s+[(](отец|сын)[)]){1,5}\s*)?  # имена или инициалы, частицы
+  (,(\s+(?!(Изд|Загл|На)[.\s])\p{Lu}\p{Ll}{0,2}[.]|\s+\p{Lu}\p{Ll}+-\p{Lu}\p{Ll}+|\s+(?!(Изд|Загл|На)[.\s])\p{Lu}[\p{Ll}-]+|\s+д[’']|\s+(кызы|оглы|ибн|братья|графиня|граф|князь|княгиня|барон|баронесса|инфанта|г-жа|младший|старший|сотник|имп[.]|аф|делле|делла|дель|де|ди|да|дю|ла|ле|ван|фон|дер|и)(?!\p{L})|\s+[(](отец|сын)[)]){1,5}\s*)?  # имена или инициалы, частицы
   (\[!\]\s*)?                                              # [!] иногда
     ( # раскрытие автора в круглых или квадратных скобках
       ([(]\p{Lu}+[^)]+[)]\s*){0,2}| # (НАСТ имя)
@@ -29,9 +29,9 @@ AUTHOR_KEY = r"""
 """
 
 TITLE_AUX = r"""
-(В\s+кн[.]:?\s+(?<in>.+)|
-Изд.\s+также\s+под\s+загл.\p{Ll}*[:;]?\s+(?<alt_title>.+)|
-На\s+тит.\s+л.\s+загл[.]:?\s+(?<alt_title>.+)|
+(В\s+кн[.]?\s*[:;]?\s+(?<in>.+)|
+Изд\W{0,2}\s*такк?же[\s,.-]*(под|по|иод)\W{0,2}\s*з[аэ]гл\p{Ll}*[.,]?\s*[:;]?\s+(?<alt_title>.+)|
+На\s+(тит[.,]*\s*л|обл)[.]?(\s+загл)?[.,]*\s*[:;]?\s+(?<alt_title>.+)|
 Загл[.]\s+обл[.]:?\s+(?<alt_title>.+))
 """
 
@@ -295,6 +295,21 @@ def extract_title_author(rec, verbose=False):
     return rec
 
 
+def split_tail_aux(rec):
+    """Move an alternative title or a «В кн.:» reference found in the tail
+    to the alt_title or in field (if that field is still empty)"""
+    m = re.search(r'(?:^|(?<=[\s.,;)]))@?\s*' + TITLE_AUX + '$', rec.tail,
+                  re.U | re.VERBOSE | re.V1)
+    if not m or rec['title'] == 'NOPARSE':
+        return rec
+    field = 'in' if m.group('in') else 'alt_title'
+    if rec.get(field):
+        return rec
+    rec[field] = m.group(field)
+    rec.tail = rec.tail[:m.start()].strip(' @')
+    return rec
+
+
 def normalize_values(rec):
     """Normalize spelling variants of field values"""
     if re.match(r'^\s*Имя\s+авт(\.|ора)\s+не\s+установлено\.?\s*$', rec.get('author', '')):
@@ -326,7 +341,7 @@ def main():
     lines = extract_section_to_process(args.infile)
     csv_writer.writeheader()
     for rec in iter_records(numbered_lines(lines)):
-        row = normalize_values(extract_title_author(rec, verbose=args.verbose))
+        row = normalize_values(split_tail_aux(extract_title_author(rec, verbose=args.verbose)))
         csv_writer.writerow(row.serialize())
         # row = extract_author(rec, author, verbose=args.verbose)
         # author = row['author']
