@@ -13,7 +13,7 @@ make split                                  # regenerate csv/vol_N.csv from txt/
 make csv/vol_3.csv                          # regenerate a single volume
 python3 scripts/split_records.py txt/vol_3.txt csv/vol_3.csv   # same, directly
 make stats                                  # summary table for README.md (scripts/stats.py)
-make README.tex README.pdf                  # pandoc + pdflatex, uses latex_header_ru.tex; README.md is the source
+make README.tex README.pdf                  # pandoc + xelatex (PT fonts via fontspec); README.md is the source
 ```
 
 The parser needs the third-party `regex` module (not stdlib `re`) — it relies on `\p{Lu}`, named groups like `(?<name>...)`, and `regex.V1`. There are no tests; verify changes by regenerating CSVs and inspecting `git diff csv/`.

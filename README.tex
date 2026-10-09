@@ -2,6 +2,7 @@
 \PassOptionsToPackage{unicode}{hyperref}
 \PassOptionsToPackage{hyphens}{url}
 \documentclass[
+  russian,
 ]{article}
 \usepackage{xcolor}
 \usepackage{amsmath,amssymb}
@@ -19,6 +20,9 @@
 \usepackage{lmodern}
 \ifPDFTeX\else
   % xetex/luatex font selection
+  \setmainfont[]{PT Serif}
+  \setsansfont[]{PT Sans}
+  \setmonofont[]{PT Mono}
 \fi
 % Use upquote if available, for straight quotes in verbatim environments
 \IfFileExists{upquote.sty}{\usepackage{upquote}}{}
@@ -47,21 +51,29 @@
 % Allow footnotes in longtable head/foot
 \IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
 \makesavenoteenv{longtable}
+\ifLuaTeX
+\usepackage[bidi=basic,shorthands=off,provide=*]{babel}
+\else
+\usepackage[bidi=default,shorthands=off,provide=*]{babel}
+\fi
+\ifPDFTeX
+\else
+\babelfont{rm}[]{PT Serif}
+\fi
+\ifLuaTeX
+  \usepackage{selnolig} % disable illegal ligatures
+\fi
 \setlength{\emergencystretch}{3em} % prevent overfull lines
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
-\usepackage[T2A]{fontenc}
-\usepackage[russian]{babel}
-\usepackage{paratype}
-\clubpenalty=10000
-\widowpenalty=1000
-\DeclareUnicodeCharacter{0301}{\hspace{-1ex}\'{ }}
+\clubpenalty=10000 \widowpenalty=1000
 \usepackage{bookmark}
 \IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
 \urlstyle{same}
 \hypersetup{
   pdftitle={Указатель заглавий произведений художественной литературы{,} 1801--1975},
   pdfauthor={Кирилл Маслинский, Евгения Лекаревич},
+  pdflang={ru},
   hidelinks,
   pdfcreator={LaTeX via pandoc}}
 
