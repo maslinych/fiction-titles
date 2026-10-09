@@ -40,6 +40,32 @@ rule('izd',
      )
 
 
+HOMOGLYPHS = str.maketrans('ABCEHKMOPTXYaceopxy', 'АВСЕНКМОРТХУасеорху')
+ROMAN = re.compile(r'M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})')
+
+
+def cyrillic_homoglyphs(m):
+    return m.group(0).translate(HOMOGLYPHS)
+
+
+def caps_homoglyphs(m):
+    w = m.group(0)
+    return w if ROMAN.fullmatch(w) else w.translate(HOMOGLYPHS)
+
+
+rule('homoglyphs',
+     'Latin letters looking like Cyrillic ones (A, B, C, E, H, K, M, O, P, T, X, '
+     'Y, a, c, e, o, p, x, y) in words that also contain Cyrillic letters '
+     '(HEXАЙ → НЕХАЙ), and Latin-only words in capitals next to a Cyrillic word '
+     'in capitals or starting a continuation line before a comma '
+     '(БРЕЙТ-/MAH, → БРЕЙТ-/МАН,); roman numerals are left alone.',
+     (r'\p{L}*\p{Cyrillic}\p{L}*', cyrillic_homoglyphs),
+     (r'(?<=[\p{Cyrillic}&&\p{Lu}][-\s]+)[ABCEHKMOPTXY]{2,}(?!\p{L})'
+      r'|(?<!\p{L})[ABCEHKMOPTXY]{2,}(?=[-\s]+[\p{Cyrillic}&&\p{Lu}])'
+      r'|^\s*[ABCEHKMOPTXY]{2,}(?=,)', caps_homoglyphs),
+     )
+
+
 def titles_section(lines):
     """Yield indices of the lines inside the titles section"""
     inside = False
