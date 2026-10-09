@@ -165,7 +165,7 @@ def numbered_lines(lines):
             yield (lineno, num, tail)
 
 
-def iter_records(numlines, k=15):
+def iter_records(numlines, k=101):
     """Join a series of numbered lines into a list of sequentially
 numbered items (Record instances with a defined 'num' key, tail
 attribute and start and end line numbers)
