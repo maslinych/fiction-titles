@@ -131,9 +131,10 @@ def extract_number(line):
     Return a tuple with a number and a text line. If a line doesn't have the
     number return zero and full line as output.
     """
-    num = re.match(r'\s*(?<num>[1-9][0-9]*(—[1-9][0-9]*)?[aабвгд]?)\.\s+(?<tail>.+)', line)
+    num = re.match(r'\s*(?<num>[1-9][0-9]*([—-][1-9][0-9]*)?[aабвгд]?)\.\s+(?<tail>.+)', line)
     if num:
-        return (num.group('num'), num.group('tail'))
+        # normalize ranges written with a hyphen to the em dash form (101—102)
+        return (num.group('num').replace('-', '—'), num.group('tail'))
     else:
         return (0, line)
 
@@ -286,14 +287,13 @@ a sequence is encountered. When an expected next item is missing, a
 def main():
     """main processing"""
     args = parse_arguments()
-    csv_writer = csv.DictWriter(args.outfile, fieldnames=['start', 'end', 'num', 'title', 'author', 'alt_title', 'in', 'tail'])
+    csv_writer = csv.DictWriter(args.outfile, fieldnames=['start', 'end', 'num', 'title', 'author', 'alt_title', 'in', 'tail'],
+                                lineterminator='\n')
     # author = None               
     lines = extract_section_to_process(args.infile)
     csv_writer.writeheader()
     for rec in iter_records(numbered_lines(lines)):
         row = extract_title_author(rec, verbose=args.verbose)
-        if row.start < 10:
-            print(row)
         csv_writer.writerow(row.serialize())
         # row = extract_author(rec, author, verbose=args.verbose)
         # author = row['author']
