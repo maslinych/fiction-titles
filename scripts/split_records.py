@@ -243,11 +243,27 @@ def parse_title(rec):
 
 def extract_title_author(rec, verbose=False):
     if '#' in rec.tail:
-        has_diez = re.match(r'^(?<title>[^#]+?)\s*[#]\s*(?<author>.+)$', rec.tail, re.U)
+        # manual markup: title # author [@ auxiliary information]
+        has_diez = re.match(r'^(?<title>[^#]+?)\s*[#]\s*(?<author>[^@]*?)\s*(@\s*(?<rest>.*))?$',
+                            rec.tail, re.U)
         rec['title'] = has_diez.group('title')
-        rec['author'] = has_diez.group('author')
+        author = has_diez.group('author')
+        rest = has_diez.group('rest') or ''
+        if not rest:
+            # auxiliary information not separated with @
+            aux = re.match(r'^(?<author>.*?)\s+(?=' + TITLE_AUX + ')(?<rest>.*)$',
+                           author, re.U | re.VERBOSE | re.V1)
+            if aux:
+                author, rest = aux.group('author'), aux.group('rest')
+        rec['author'] = author
         rec['alt_title'] = ''
-        rec.tail = ''
+        rec['in'] = ''
+        rec.tail = rest
+        has_aux = re.match('^' + TITLE_AUX + '$', rest, re.U | re.VERBOSE | re.V1)
+        if has_aux:
+            rec['alt_title'] = has_aux.group('alt_title') or ''
+            rec['in'] = has_aux.group('in') or ''
+            rec.tail = ''
         return rec
     author_key = re.compile(r"^(?<title>.*[.?!\]»])\s+(?<author>" + AUTHOR_KEY + r'(,\s+' + AUTHOR_KEY + ')?)' +
                             '(@?' + TITLE_AUX + ')?' + "(?<tail>.*?)$", re.U | re.VERBOSE | re.V1)

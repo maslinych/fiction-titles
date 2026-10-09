@@ -31,7 +31,7 @@ Only the tracked files (`git ls-files`) are part of the project; the many untrac
 2. `numbered_lines` / `extract_number` — detects lines beginning with an item number like `123.`, `12а.`, or a range `101—102.` (em dash; Cyrillic/Latin letter suffixes а–д).
 3. `iter_records` — groups lines into records by relying on **sequential numbering** (`BibItem` handles suffixes and ranges for ordering). Unnumbered lines and lines whose number is lower than the current item are appended to the current record. A jump larger than `k` (default 101) is treated as an accidental number inside text (a year, print run); a smaller gap emits placeholder records with `tail = 'MISSING'` for the skipped numbers.
 4. `extract_title_author` — splits the record text into `title`, `author`, `alt_title`, `in`, `tail` using the `AUTHOR_KEY` regex (author surnames are in ALL CAPS in the source) and `TITLE_AUX` (`В кн.:`, `Изд. также под загл.`, `На тит. л. загл.`, `Загл. обл.`). Fallback: initials-only author. Otherwise `title = 'NOPARSE'`.
-   - **Manual override:** if a record in the txt contains `#`, everything before it is the title and everything after is the author. Insert `#` into the txt to fix records the regex can't split.
+   - **Manual override:** if a record in the txt contains `#`, everything before it is the title and everything after is the author (may be empty). An `@` after the author ends it; what follows is matched against `TITLE_AUX` (→ `in`/`alt_title`) or goes to `tail`. Without `@`, a trailing `TITLE_AUX` phrase is still split off. Insert `#` into the txt to fix records the regex can't split.
 
 CSV columns: `start,end` (line numbers in `txt/vol_N.txt`), `num`, `title`, `author`, `alt_title`, `in`, `tail` — see README.md for semantics.
 
