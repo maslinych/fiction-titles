@@ -123,9 +123,14 @@ class Record(OrderedDict):
         out['start'] = self.start
         out['end'] = self.end
         for k, v in self.items():
-            out[k] = str(v)
-        out['tail'] = self.tail
+            out[k] = normalize_space(str(v))
+        out['tail'] = normalize_space(self.tail)
         return out
+
+
+def normalize_space(s):
+    """Collapse runs of whitespace and strip"""
+    return re.sub(r'\s+', ' ', s).strip()
 
 
 def extract_number(line):
