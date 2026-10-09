@@ -295,6 +295,13 @@ def extract_title_author(rec, verbose=False):
     return rec
 
 
+def normalize_values(rec):
+    """Normalize spelling variants of field values"""
+    if re.match(r'^\s*Имя\s+авт(\.|ора)\s+не\s+установлено\.?\s*$', rec.get('author', '')):
+        rec['author'] = 'Имя авт. не установлено.'
+    return rec
+
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Split scanned txt file into numbered records (CSV)', epilog=""" The idea is to rely on the sequentially numbered items. The script
 identifies all lines that look like a numbered item. All non-itemlike
@@ -319,7 +326,7 @@ def main():
     lines = extract_section_to_process(args.infile)
     csv_writer.writeheader()
     for rec in iter_records(numbered_lines(lines)):
-        row = extract_title_author(rec, verbose=args.verbose)
+        row = normalize_values(extract_title_author(rec, verbose=args.verbose))
         csv_writer.writerow(row.serialize())
         # row = extract_author(rec, author, verbose=args.verbose)
         # author = row['author']
