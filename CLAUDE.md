@@ -12,7 +12,8 @@ A dataset project, not an application: OCR'd text of the 7-volume Soviet bibliog
 make split                                  # regenerate csv/vol_N.csv from txt/vol_N.txt (vols 1–6)
 make csv/vol_3.csv                          # regenerate a single volume
 python3 scripts/split_records.py txt/vol_3.txt csv/vol_3.csv   # same, directly
-make README.pdf                             # pandoc + pdflatex, uses latex_header_ru.tex
+make stats                                  # summary table for README.md (scripts/stats.py)
+make README.tex README.pdf                  # pandoc + pdflatex, uses latex_header_ru.tex; README.md is the source
 ```
 
 The parser needs the third-party `regex` module (not stdlib `re`) — it relies on `\p{Lu}`, named groups like `(?<name>...)`, and `regex.V1`. There are no tests; verify changes by regenerating CSVs and inspecting `git diff csv/`.
@@ -40,4 +41,5 @@ CSV columns: `start,end` (line numbers in `txt/vol_N.txt`), `num`, `title`, `aut
 ## Other files
 
 - `scripts/ukasatel.py` — separate, standalone parser (pandas/tqdm, stdlib `re`) for volume 7's author index (`УКАЗАТЕЛЬ ИМЕН АВТОРОВ…`), producing `authors_clean.csv`. Hardcodes input path `vol_7.txt` relative to CWD. Not wired into the Makefile.
-- `Makefile`'s `sourcefiles` lists `vol_1.txt` twice and omits `vol_7.txt` (vol 7 is the index volume, not handled by `split_records.py`).
+- `Makefile`'s `sourcefiles` omits `vol_7.txt` (vol 7 is the index volume, not handled by `split_records.py`; it is used as a lexicon by `fix_hyphenation.py`).
+- Correction scripts (each logs every change; run on txt, then `make split`): `txt_rules.py RULE` (named regex rules), `fix_author_period.py`, `fix_hyphenation.py` (all volumes at once), `remove_ocr_junk.py`, `backport_csv_edits.py` (one-off: CSV hand edits → txt).
