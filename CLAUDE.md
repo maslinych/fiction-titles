@@ -27,6 +27,7 @@ The parser needs the third-party `regex` module (not stdlib `re`) — it relies 
 `tests/` checks the CSVs against `datapackage.json`:
 - `test_package.py`, `dvcheck.py` — common checks shared by all datasets of the repository (descriptor validity, files present, schema types/constraints, categories, leading/trailing whitespace). Supplied by the repository editors; do not edit them.
 - `test_data.py` — this dataset's own checks (no `<letter>`/`#`/`@` markup or `^`/`<` OCR junk in values, no punctuation-only `tail`, author final-period rule, no Latin look-alike letters in Cyrillic author names, `start`/`end` ranges). Each check is documented in the «Проверки этого датасета» section of `tests/tests_readme.md`; update it when adding a check.
+- `test_fiction_titles.py` — README claims, added by the editors: consecutive `num`, `start`/`end` pointing at the record's lines in the txt, the single NOPARSE/MISSING placeholder, the «Сводка» table matching the data (update it with `make stats` output, or this test fails), author surnames not split by spaces where vol. 7 spells them joined (`SPLIT_AS_IN_SOURCE` lists exceptions checked against the scans), and `split_records.py` reproducing the published CSVs (skipped without `regex`).
 
 ## Data flow and workflow
 

@@ -637,6 +637,12 @@
       "path": "tests/tests_readme.md",
       "mediatype": "text/markdown",
       "description": "Описание тестов датасета и порядок их запуска"
+    },
+    {
+      "name": "tests_test_fiction_titles_py",
+      "path": "tests/test_fiction_titles.py",
+      "mediatype": "text/x-python",
+      "description": "Проверки утверждений README: нумерация записей, ссылки start/end на строки txt-файлов, запись-заполнитель, «Сводка», фамилии авторов по указателю имен (т. 7), воспроизводимость таблиц парсером (см. tests/tests_readme.md)."
     }
   ]
 }
