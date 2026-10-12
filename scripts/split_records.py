@@ -10,15 +10,15 @@ from collections import OrderedDict
 
 AUTHOR_KEY = r"""
 ((?<key>
-((\p{Lu}[.]\s*|и\s+){2,4}|-\p{Lu}{2,4})\s+[(]\p{Lu}+[^)]+[)]                  # В. Л. Т. (РАСШИФРОВКА)
+((\p{Lu}[.]\s*|и\s+){2,4}|-\p{Lu}{2,4})(\s+[(]\p{Lu}+[^)]+[)]){1,2}          # В. Л. Т. (РАСШИФРОВКА)
 |
-  \p{Lu}+([’']?(\p{Lu}+|\s+\p{Lu}+|-|\s+\p{Lu}[.](?=\s*(\p{Lu}[.]|\p{Lu}{2}|[(]\p{Lu}))){1,9}|[*]{1,5}\p{Lu}{0,3}|[.][.][.]+\s*\p{Lu}{0,3}|—\p{Lu}{1,6})\s* # ФАМИЛИЯ или ПСЕВДОНИМ M*** БАЗ...В
+  \p{Lu}+([’']?(\p{Lu}+|\s+\p{Lu}+|-|\s+\p{Lu}[.](?=\s*(\p{Lu}[.]|\p{Lu}{2}|[(]\p{Lu}))|\s+(де|дю|ди|да|дель|ла|фон|ван)\s+(?=\p{Lu}{2})|\s+д[’'](?=\p{Lu}{2})){1,9}|[*]{1,5}\p{Lu}{0,3}|[.][.][.]+\s*\p{Lu}{0,3}|—\p{Lu}{1,6})\s* # ФАМИЛИЯ или ПСЕВДОНИМ M*** БАЗ...В
   (\[!\]\s*)?                                              # [!] иногда
-  (,(\s+(?!(Изд|Загл|На)[.\s])\p{Lu}\p{Ll}{0,2}[.]|\s+\p{Lu}\p{Ll}+-\p{Lu}\p{Ll}+|\s+(?!(Изд|Загл|На)[.\s])\p{Lu}[\p{Ll}-]+|\s+д[’']|\s+(кызы|оглы|ибн|братья|графиня|граф|князь|княгиня|барон|баронесса|инфанта|г-жа|младший|старший|сотник|имп[.]|аф|делле|делла|дель|де|ди|да|дю|ла|ле|ван|фон|дер|и)(?!\p{L})|\s+[(](отец|сын)[)]){1,5}\s*)?  # имена или инициалы, частицы
+  (,(\s+(?!(Изд|Загл|На)[.\s])\p{Lu}\p{Ll}{0,2}[.](\s*\[!\])?|,?\s+(король|королева|принцесса|инфанта|протопоп|подьячий|мистрис|лорд|младший|старший|г-жа)(?!\p{L})(\s+(?!(Изд|Загл|На)[.\s])\p{L}+(?!\p{L}))?|\s+\p{Lu}\p{Ll}+-\p{Lu}\p{Ll}+|\s+(?!(Изд|Загл|На)[.\s])\p{Lu}[\p{Ll}-]+|\s+д[’']|\s+(кызы|оглы|ибн|братья|графиня|граф|князь|княгиня|барон|баронесса|инфанта|г-жа|младший|старший|сотник|имп[.]|аф|делле|делла|дель|де|ди|да|дю|ла|ле|ван|фон|дер|и)(?!\p{L})|\s+[(](отец|сын)[)]){1,5}\s*)?  # имена или инициалы, частицы
   (\[!\]\s*)?                                              # [!] иногда
     ( # раскрытие автора в круглых или квадратных скобках
-      ([(]\p{Lu}+[^)]+[)]\s*){0,2}| # (НАСТ имя)
-      (\[\p{Lu}+[^]]*\])? # [АВТОР ...]
+      ([(]\p{Lu}+[^)]+[)]\s*){0,2} # (НАСТ имя)
+      (\[\p{Lu}+[^]]*\]\s*)? # [АВТОР ...]
     )
 |
 О[.]\s*ГЕНРИ                                            # О. ГЕНРИ
@@ -39,6 +39,14 @@ NOTE = r"""
 (?:^|(?<=[\s.,;)]))@?\s*
 (?<note>(Ошибочно\s+приписывал\p{Ll}*|Предполагаем\p{Ll}*\s+имя(\s+\p{Ll}+)?\s+авт(\.|ора))(?!\p{L}).*)$
 """
+
+# abbreviated first names and titles that keep their period at the end of
+# an author value (АЛТАЕВ, Ал.; ЕКАТЕРИНА II, имп.)
+NAME_ABBREVIATIONS = set("""
+Ал Алек Ан Андр Ар Арк Арт Аф Бор Бр Вад Вас Вен Вик Вл Влад Вяч Ген Гр Григ
+Гриш Дав Дж Дм Ев Евг Евст Ек Ел Ив Иос Ис Мар Мих Ник Пв Сам Серг Ст Фр Юр Як
+Ад имп
+""".split())
 
 # \p{Lu}(\p{Lu}+- |\p{Lu}+ |\P{Lu}\.\s*|\p{Lu}+)+\p{Lu}\s*,
 
@@ -171,11 +179,22 @@ def extract_section_to_process(infile):
 def numbered_lines(lines):
     """Generator producing numbered lines as tuples
     (lineno, number, text without number, full line)"""
+    heading = None
     for lineno, line in lines:
         line = line.strip()
         if line.startswith('#END'):
             break
+        # section headings <letter>А</letter> are not part of the records,
+        # nor is the OCR'd heading letter that often follows them
+        letter = re.match(r'<letter>(?<heading>.*)</letter>$', line)
+        if letter:
+            heading = letter.group('heading').lower()
+            continue
+        if line and line.lower() == heading:
+            heading = None
+            continue
         if line:
+            heading = None
             num, tail = extract_number(line)
             yield (lineno, num, tail, line)
 
@@ -288,7 +307,8 @@ def extract_title_author(rec, verbose=False):
         rec['author'] = has_author_key.group('author')
         rec['alt_title'] = has_author_key.group('alt_title') or ''
         rec['in'] = has_author_key.group('in') or ''
-        rec.tail = has_author_key.group('tail')
+        # @ is markup for the end of the author, not part of the tail
+        rec.tail = has_author_key.group('tail').lstrip('@ ')
     elif has_initials:
         rec['title'] = has_initials.group('title')
         rec['author'] = has_initials.group('author')
@@ -333,10 +353,29 @@ def split_tail_aux(rec):
     return rec
 
 
+def strip_author_period(author):
+    """Remove the final period of the bibliographic record from an author
+    value. The period is kept when it closes an initial (ЗОНЕНБЕРГ, Х.;
+    П-А.) or an abbreviated name (АЛТАЕВ, Ал.), or follows asterisks or
+    an ellipsis (ГРАФ П***.)"""
+    # a doubled period is an OCR artifact, an ellipsis is not
+    author = re.sub(r'(?<![.])\.\s*\.$', '.', author)
+    if re.search(r'[)\]]\s*\.$', author):
+        return re.sub(r'\s*\.$', '', author)
+    m = re.search(r"(?<![\p{L}'’-])(?<word>[\p{L}'’-]+)\s*\.$", author)
+    if not m:
+        return author
+    last = m.group('word').split('-')[-1]
+    if len(last) < 2 or last in NAME_ABBREVIATIONS:
+        return author
+    return re.sub(r'\s*\.$', '', author)
+
+
 def normalize_values(rec):
     """Normalize spelling variants of field values"""
     if re.match(r'^\s*Имя\s+авт(\.|ора)\s+не\s+установлено\.?\s*$', rec.get('author', '')):
-        rec['author'] = 'Имя авт. не установлено.'
+        rec['author'] = 'Имя авт. не установлено'
+    rec['author'] = strip_author_period(normalize_space(rec.get('author', '')))
     return rec
 
 
