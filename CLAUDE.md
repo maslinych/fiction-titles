@@ -54,4 +54,4 @@ CSV columns: `start,end` (line numbers in `txt/vol_N.txt`), `num`, `title`, `aut
 
 - `scripts/ukasatel.py` — separate, standalone parser (pandas/tqdm, stdlib `re`) for volume 7's author index (`УКАЗАТЕЛЬ ИМЕН АВТОРОВ…`), producing `authors_clean.csv`. Hardcodes input path `vol_7.txt` relative to CWD. Not wired into the Makefile.
 - `Makefile`'s `sourcefiles` omits `vol_7.txt` (vol 7 is the index volume, not handled by `split_records.py`; it is used as a lexicon by `fix_hyphenation.py`).
-- Correction scripts (each logs every change; run on txt, then `make split`): `txt_rules.py RULE` (named regex rules), `fix_author_period.py`, `fix_hyphenation.py` (all volumes at once), `remove_ocr_junk.py`, `backport_csv_edits.py` (one-off: CSV hand edits → txt).
+- Correction scripts (each logs every change; run on txt, then `make split`): `txt_rules.py RULE` (named regex rules), `fix_author_period.py`, `fix_hyphenation.py` (all volumes at once), `fix_split_surnames.py N…` (surnames split by a space, by the vol. 7 index; exceptions from the test's `SPLIT_AS_IN_SOURCE`), `remove_ocr_junk.py`, `backport_csv_edits.py` (one-off: CSV hand edits → txt).
